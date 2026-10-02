@@ -109,7 +109,7 @@ Local tests exercise channel behavior with fixtures. A live Slack mention/reply 
 
 ## Calls
 
-The included speech adapter uses the Realtime API at `api.openai.com`. Set `VOICE_API_KEY` to a key with access to that API and `VOICE_MODEL` to a supported Realtime model (the local UI test used `gpt-realtime-2.1`); `VOICE_NAME` selects the voice. `OPENAI_BASE_URL` changes the compute model endpoint only, not speech. Calls use browser microphone access and WebRTC. Hosted deployments need HTTPS. The server mediates provider setup and delegates compute to the selected Dot's conversation.
+The included speech adapter uses the Realtime API at `api.openai.com`. Set `VOICE_API_KEY` to a key with access to that API and `VOICE_MODEL` to a supported Realtime model (the local UI test used `gpt-realtime-2.1`); `VOICE_NAME` selects the voice. `OPENAI_BASE_URL` changes the compute model endpoint only, not speech. To open calls through an OpenAI-compatible gateway instead, set `VOICE_BASE_URL` to its `/v1` base: calls are created at `<base>/live/sessions` with `VOICE_MODEL` as the gateway's live alias, and on hang-up the call's duration is reported to `<base>/live/sessions/<id>/usage` (the gateway bills from that report; the browser closing its peer ends the provider call). Calls use browser microphone access and WebRTC. Hosted deployments need HTTPS. The server mediates provider setup and delegates compute to the selected Dot's conversation.
 
 A configured key is not evidence of a successful call. Verify microphone access, audio playback, compute delegation, interruption, hangup, and the saved receipt with your deployment before relying on voice workflows.
 

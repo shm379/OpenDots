@@ -8,7 +8,7 @@ afterEach(() => {
   resources.splice(0).forEach((close) => close());
   vi.useRealTimers();
 });
-function fixture() {
+function fixture(overrides: Partial<PlatformConfig> = {}) {
   const store = new Store(':memory:');
   const workspace = new WorkspaceStore(':memory:', 'owner');
   workspace.bindThread('thread', workspace.dots()[0].id, 'A conversation');
@@ -23,6 +23,7 @@ function fixture() {
     voiceName: 'marin',
     runtimeUrl: '',
     slackUsers: [],
+    ...overrides,
   };
   const turn = vi.fn(
     async (_thread: string, _prompt: string, _signal: AbortSignal) =>
@@ -247,4 +248,41 @@ it('sanitizes custom provider transport error names', async () => {
   expect(ended.error).toBe(
     'The local call stopped, but provider hangup failed (transport error).',
   );
+});
+it('opens calls through a gateway alias and reports the final duration instead of hanging up', async () => {
+  const f = fixture({ voiceBaseUrl: 'https://gate.example/v1' });
+  f.transport.mockImplementation(async (url) =>
+    String(url).endsWith('/usage')
+      ? Response.json({ final: true })
+      : Response.json(
+          {
+            id: 'rtc_gate',
+            session: { id: 'rtc_gate' },
+            transport: { type: 'webrtc', sdp: offer },
+          },
+          { status: 201 },
+        ),
+  );
+  const call = await f.voice.begin(
+    'thread',
+    offer,
+    new AbortController().signal,
+  );
+  const [url, init] = f.transport.mock.calls[0];
+  expect(url).toBe('https://gate.example/v1/live/sessions');
+  const sent = JSON.parse(String(init?.body));
+  expect(sent.model).toBe('voice-model');
+  expect(sent.transport).toEqual({ type: 'webrtc', sdp: offer });
+  expect(sent.session.instructions).toContain('Earlier topic');
+  f.voice.activate(call.id);
+  await f.voice.end(call.id, 'Done');
+  const usage = f.transport.mock.calls.find(([u]) =>
+    String(u).endsWith('/live/sessions/rtc_gate/usage'),
+  );
+  expect(usage).toBeDefined();
+  expect(JSON.parse(String(usage?.[1]?.body))).toMatchObject({ final: true });
+  expect(
+    f.transport.mock.calls.some(([u]) => String(u).endsWith('/hangup')),
+  ).toBe(false);
+  expect(f.workspace.call(call.id).error ?? null).toBeNull();
 });

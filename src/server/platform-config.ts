@@ -13,6 +13,9 @@ export interface PlatformConfig {
   browserUrl?: string;
   browserSecret?: string;
   voiceKey?: string;
+  // A gateway's OpenAI-compatible base (…/v1) to open calls through; unset
+  // calls OpenAI's Realtime API directly.
+  voiceBaseUrl?: string;
   voiceModel?: string;
   voiceName: string;
   slackChannel?: string;
